@@ -121,6 +121,7 @@ void upnpPFInterface_init()
 
 int get_list_port_mapping(PortMappingEntry_t *port_mapping_entry)
 {
+    // @todo We may want to remove this function
     return 0;
 }
 
@@ -128,7 +129,7 @@ int upnpPFInterface_addPortMapping(const char *eport, const char *iport, Support
 {
     int r = 0;
 
-    char str_proto[4];
+    const char *str_proto;
 
     int i = 0;
     char index[6];
@@ -157,26 +158,31 @@ int upnpPFInterface_addPortMapping(const char *eport, const char *iport, Support
                                             extPort, intClient, intPort,
                                             protocol, desc, enabled,
                                             rHost, duration);
+
         if (r == 0)
+        {
             printf("%2d %s %5s->%s:%-5s '%s' '%s' %s\n",
                    i, protocol, extPort, intClient, intPort,
                    desc, rHost, duration);
+            // check if conflict port
+            if (strcmp(extPort, eport) == 0 && strcmp(desc, g_desc) != 0)
+            {
+                LOG(LOG_ERR, "External Port %s has been already in used", eport);
+                // @todo define Error code
+                return -2;
+            }
+            // @todo Need variable to
+            // @todo Need check description == MAC for remove
+        }
         else
+        {
+            // @todo UPNP_GetGenericPortMappingEntry again with the same index entry if r != 713 (SpecifiedArrayIndexInvalid)
             LOG(LOG_ERR, "GetGenericPortMappingEntry() returned %d (%s)", r, strupnperror(r));
+        }
         i++;
     } while (r == 0);
 
-    switch (added_protocol)
-    {
-    case UDP:
-        strcpy(str_proto, "UDP");
-        break;
-    case TCP:
-        strcpy(str_proto, "TCP");
-        break;
-    default:
-        break;
-    }
+    str_proto = get_proto_str(added_protocol);
 
     get_list_port_mapping(0);
 

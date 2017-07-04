@@ -10,11 +10,39 @@
 #ifndef __UPNP_PF_INTERFACE_H
 #define __UPNP_PF_INTERFACE_H
 
+/** Using X Macro pattern for enum to string */
+#define SUPPORTED_PROTOCOLS(X) \
+    X(UDP, "UDP")              \
+    X(TCP, "TCP")
+
+/** Generate enum */
+#define PROTOCOL_ENUM(NAME, TEXT) NAME,
+
+/** Generate switch case for enum to string */
+#define PROTOCOL_TEXT(NAME, TEXT) \
+    case NAME:                    \
+        return TEXT;
+
 /** UPnP Supported Protocols  */
 typedef enum _SupportedProtocol_t {
-    UDP,
-    TCP
+    SUPPORTED_PROTOCOLS(PROTOCOL_ENUM)
 } SupportedProtocol_t;
+
+/**
+ * @brief Get String of typedef SupportedProtocol_t
+ * @details Get String of typedef SupportedProtocol_t
+ * 
+ * @param[in] proto protocol name
+ * @return protocol string
+ */
+static inline const char *get_proto_str(SupportedProtocol_t proto)
+{
+    switch (proto)
+    {
+        SUPPORTED_PROTOCOLS(PROTOCOL_TEXT)
+    }
+    return "Unknown";
+}
 
 /**
  * @brief Init for UPnP Interface
