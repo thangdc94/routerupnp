@@ -12,6 +12,12 @@
 
 #include <stdio.h>
 
+#ifdef DISABLE_LOG
+#define LOG(level, ...) \
+    do                  \
+    {                   \
+    } while (0)
+#else
 /** No Log */
 #define LOG_NONE (0)
 /** Log fatal error */
@@ -34,6 +40,8 @@
 #define LOG_LEVEL LOG_DBG
 #endif //LOG_LEVEL
 
+/** Log util function */
+
 static const char *log_level_strings[] = {
     "NONE",  // 0
     "FATAL", // 1
@@ -42,8 +50,6 @@ static const char *log_level_strings[] = {
     "INFO",  // 4
     "DEBUG"  // 5
 };
-
-/** Log util function */
 #define LOG(level, ...)                                                                    \
     do                                                                                     \
     {                                                                                      \
@@ -65,4 +71,5 @@ static const char *log_level_strings[] = {
         }                                                                                  \
     } while (0)
 
+#endif //DISABLE_LOG
 #endif //__LOG_UTIL_H
