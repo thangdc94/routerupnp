@@ -10,7 +10,7 @@
 #ifndef __UPNP_PF_INTERFACE_H
 #define __UPNP_PF_INTERFACE_H
 
-/** Using X Macro pattern for enum to string */
+/** Using X Macro technique for enum to string */
 #define SUPPORTED_PROTOCOLS(X) \
     X(UDP, "UDP")              \
     X(TCP, "TCP")
@@ -18,31 +18,13 @@
 /** Generate enum */
 #define PROTOCOL_ENUM(NAME, TEXT) NAME,
 
-/** Generate switch case for enum to string */
-#define PROTOCOL_TEXT(NAME, TEXT) \
-    case NAME:                    \
-        return TEXT;
-
 /** UPnP Supported Protocols  */
 typedef enum _SupportedProtocol_t {
     SUPPORTED_PROTOCOLS(PROTOCOL_ENUM)
 } SupportedProtocol_t;
 
-/**
- * @brief Get String of typedef SupportedProtocol_t
- * @details Get String of typedef SupportedProtocol_t
- * 
- * @param[in] proto protocol name
- * @return protocol string
- */
-static inline const char *get_proto_str(SupportedProtocol_t proto)
-{
-    switch (proto)
-    {
-        SUPPORTED_PROTOCOLS(PROTOCOL_TEXT)
-    }
-    return "Unknown";
-}
+/** Get String of typedef SupportedProtocol_t */
+extern const char *proto_str[];
 
 /**
  * @brief Init for UPnP Interface
@@ -55,9 +37,9 @@ void upnpPFInterface_init();
  * @brief Add a port forwarding rule
  * @details Add a port forwarding rule on Router using UPnP
  * 
- * @param eport external port
- * @param iport internal port
- * @param protocol protocol will be mapped
+ * @param[in] eport external port
+ * @param[in] iport internal port
+ * @param[in] protocol protocol will be mapped
  * @return 0 if OK or error code if failed
  */
 int upnpPFInterface_addPortMapping(const char *eport, const char *iport, SupportedProtocol_t protocol);
@@ -66,21 +48,21 @@ int upnpPFInterface_addPortMapping(const char *eport, const char *iport, Support
  * @brief Disable port forwarding rule 
  * @details Disable a port forwarding rule on Router using UPnP
  * 
- * @param eport external port
- * @param iport internal port
- * @param protocol protocol will be mapped
+ * @param[in] eport external port
+ * @param[in] iport internal port
+ * @param[in] proto protocol will be mapped
  * @return 0 if OK or error code if failed
  */
-int upnpPFInterface_diablePortMapping(const char *eport, const char *iport, SupportedProtocol_t protocol);
+int upnpPFInterface_diablePortMapping(const char *eport, const char *iport, SupportedProtocol_t proto);
 
 /**
  * @brief Remove a port forwarding rule
  * @details Remove a port forwarding rule on Router using UPnP
  * 
- * @param eport external port
- * @param protocol protocol will be mapped
+ * @param[in] eport external port
+ * @param[in] proto protocol will be mapped
  * @return 0 if OK or error code if failed
  */
-int upnpPFInterface_removePortMapping(const char *eport, SupportedProtocol_t protcol);
+int upnpPFInterface_removePortMapping(const char *eport, SupportedProtocol_t proto);
 
 #endif //__UPNP_PF_INTERFACE_H

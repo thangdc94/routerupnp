@@ -26,6 +26,10 @@
 /** Expired Duration for Port Mapping */
 #define LEASE_DURATION "1440"
 
+/** Generate string enum array */
+#define PROTOCOL_TEXT(NAME, TEXT) TEXT,
+const char *proto_str[] = {SUPPORTED_PROTOCOLS(PROTOCOL_TEXT)};
+
 /** Port Mapping Entry */
 typedef struct _PortMappingEntry_t
 {
@@ -182,7 +186,7 @@ int upnpPFInterface_addPortMapping(const char *eport, const char *iport, Support
         i++;
     } while (r == 0);
 
-    str_proto = get_proto_str(added_protocol);
+    str_proto = proto_str[added_protocol];
 
     get_list_port_mapping(0);
 
