@@ -3,7 +3,7 @@
  * @brief A  Generic Linked List
  * @details A Generic Linked List. This is not thread safe
  * 
- * @authors [upstream] @b pseudomuto
+ * @authors David Muto (pseudomuto) | Contact: <david.muto@gmail.com>
  * @authors Pham Ngoc Thang (thangdc94)
  * @see https://gist.github.com/pseudomuto/6334796#file-sample_app-c
  * @see http://pseudomuto.com/development/2013/05/02/implementing-a-generic-linked-list-in-c/
