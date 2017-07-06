@@ -13,6 +13,7 @@
 #include <stdio.h>
 
 #ifdef DISABLE_LOG
+/** function to remove log */
 #define LOG(level, ...) \
     do                  \
     {                   \
@@ -50,6 +51,8 @@ static const char *log_level_strings[] = {
     "INFO",  // 4
     "DEBUG"  // 5
 };
+
+/** function to print log */
 #define LOG(level, ...)                                                                    \
     do                                                                                     \
     {                                                                                      \

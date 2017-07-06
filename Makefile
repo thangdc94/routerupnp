@@ -28,10 +28,12 @@ INCLUDES= \
 	-I./util \
 	-I./mq_interface \
 	-I./upnp_pf_interface \
+	-I./llist \
 	\
 
 DEFINES = \
    $(COMPILER_DEFINES) \
+#    -DDISABLE_LOG
   
 COMPILER_FLAGS ?= \
    -Wall \
@@ -45,8 +47,10 @@ APPLICATION_FILES = \
 	$(APP_DIRECTORY)/routerupnp.c 	\
 	$(APP_DIRECTORY)/mq_interface/mq_posix_interface.c	\
 	$(APP_DIRECTORY)/upnp_pf_interface/upnp_pf_interface.c \
+	$(APP_DIRECTORY)/upnp_pf_interface/upnp_pf_errcode.c \
 	$(APP_DIRECTORY)/util/util.c \
-	$(APP_DIRECTORY)/util/netutil/netutil.c
+	$(APP_DIRECTORY)/util/netutil/netutil.c \
+	$(APP_DIRECTORY)/llist/list.c
 
 # -MMD and -MF generates Makefile dependencies while at the same time compiling.
 # -MP notes to add a dummy 'build' rule for each header file.  This 
@@ -56,7 +60,7 @@ DEPENDENCY_FLAGS ?= -MMD -MP -MF $(@D)/$*.d
 
 CFLAGS += $(INCLUDES) $(DEFINES) $(COMPILER_FLAGS) $(DEPENDENCY_FLAGS)
 LDFLAGS += 
-LDLIBS += -lminiupnpc -lrt
+LDLIBS += -lminiupnpc -lrt -lpthread
 
 DOC_DIR=$(APP_DIRECTORY)/doc
 OUTPUT_DIR=$(APP_DIRECTORY)/build

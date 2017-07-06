@@ -6,8 +6,13 @@
  * @author Pham Ngoc Thang (thangdc94)
  * @bug No known bug
  */
+
+#include <unistd.h>
+#include <stdlib.h>
+
 #include "mq_interface.h"
 #include "upnp_pf_interface.h"
+#include "upnp_pf_errcode.h"
 
 /**
  * @brief Main function
@@ -20,7 +25,25 @@
  */
 int main(int argc, char const *argv[])
 {
-    upnpPFInterface_init();
-    upnpPFInterface_addPortMapping("8888", "8888", UDP);
+    while (SUCCESS != upnpPFInterface_init())
+    {
+        sleep(5);
+    }
+    int num_of_rules = 2;
+    MappingRule_t rules[num_of_rules];
+    rules[0] = (MappingRule_t){
+        .eport = "8888",
+        .iport = "8888",
+        .proto = UDP,
+    };
+
+    rules[1] = (MappingRule_t){
+        .eport = "9999",
+        .iport = "9999",
+        .proto = TCP,
+    };
+
+    upnpPFInterface_updatePortMapping(rules, num_of_rules);
+
     return 0;
 }

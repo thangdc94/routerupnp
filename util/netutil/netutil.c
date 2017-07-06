@@ -20,8 +20,8 @@
 
 char *getmac_from_ifname(char *iface)
 {
-#define MAC_STRING_LENGTH 13
-    char *ret = malloc(MAC_STRING_LENGTH);
+    const int mac_string_length = 13;
+    char *ret = malloc(mac_string_length);
     struct ifreq s;
     int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
 
@@ -30,7 +30,7 @@ char *getmac_from_ifname(char *iface)
     {
         int i;
         for (i = 0; i < 6; ++i)
-            snprintf(ret + i * 2, MAC_STRING_LENGTH - i * 2, "%02x", (unsigned char)s.ifr_addr.sa_data[i]);
+            snprintf(ret + i * 2, mac_string_length - i * 2, "%02x", (unsigned char)s.ifr_addr.sa_data[i]);
     }
     else
     {

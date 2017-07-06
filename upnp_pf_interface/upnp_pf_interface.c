@@ -1,7 +1,7 @@
 /**
  * @file upnp_pf_interface.c
- * @brief 
- * @details 
+ * @brief Implement of Port Mapping Config using UPnP protocol
+ * @details Implement of Port Mapping Config using UPnP protocol
  * 
  * @author Pham Ngoc Thang (thangdc94)
  * @bug No known bug
@@ -14,8 +14,11 @@
 #include <miniupnpc/upnpcommands.h>
 #include <miniupnpc/upnperrors.h>
 
+#include "list.h"
+
 #include "logutil.h"
 #include "upnp_pf_interface.h"
+#include "upnp_pf_errcode.h"
 #include "netutil/netutil.h"
 
 #ifdef LOG_LEVEL
@@ -23,35 +26,28 @@
 #define LOG_LEVEL LOG_DBG
 #endif //LOG_LEVEL
 
-/** Expired Duration for Port Mapping */
-#define LEASE_DURATION "1440"
+/** 
+ * Expired Duration for Port Mapping in seconds. 
+ * Port Mapping Rule will be remove after amounts of this time
+ */
+#define LEASE_DURATION "86400" // 1 day
 
-/** Generate string enum array */
-#define PROTOCOL_TEXT(NAME, TEXT) TEXT,
-const char *proto_str[] = {SUPPORTED_PROTOCOLS(PROTOCOL_TEXT)};
+#ifdef SUPPORTED_PROTOCOLS
 
-/** Port Mapping Entry */
-typedef struct _PortMappingEntry_t
+/** Generate switch case for ::get_proto_str() */
+#define PROTOCOL_TEXT(NAME, TEXT) \
+    case NAME:                    \
+        return TEXT;
+const char *get_proto_str(SupportedProtocol_t proto)
 {
-    /** Port Mapping index */
-    char index[6];
-    /** Internal Client IP */
-    char intClient[40];
-    /** Internal Port Mapping */
-    char intPort[6];
-    /** External Port Mapping */
-    char extPort[6];
-    /** Protocol */
-    char protocol[4];
-    /** Port Mapping Description */
-    char desc[80];
-    /** Is Entry enabled */
-    char enabled[6];
-    /** Remote Host */
-    char rHost[64];
-    /** Expired Duration of this entry map */
-    char duration[16];
-} PortMappingEntry_t;
+    switch (proto)
+    {
+        SUPPORTED_PROTOCOLS(PROTOCOL_TEXT)
+    }
+    return "Unknown";
+}
+#undef PROTOCOL_TEXT
+#endif //SUPPORTED_PROTOCOLS
 
 static struct UPNPUrls *g_urls;
 static struct IGDdatas *g_data;
@@ -59,9 +55,8 @@ static char g_lanaddr[64] = "unset"; /* my ip address on the LAN */
 static char g_desc[13] = "description";
 
 /* Function Prototypes */
-static int get_list_port_mapping(PortMappingEntry_t *port_mapping_entry);
 
-void upnpPFInterface_init()
+int upnpPFInterface_init()
 {
     struct UPNPDev *devlist = 0;
     const char *multicastif = 0;
@@ -121,36 +116,72 @@ void upnpPFInterface_init()
             free(desc);
         }
     }
+    else
+    {
+        LOG(LOG_ERR, "No valid UPnP Internet Gateway Device found");
+        return -1;
+    }
+    return SUCCESS;
 }
 
-int get_list_port_mapping(PortMappingEntry_t *port_mapping_entry)
+static bool remove_rule(void *data)
 {
-    // @todo We may want to remove this function
-    return 0;
+    MappingRule_t *node = (MappingRule_t *)data;
+    printf("%s\n", get_proto_str(node->proto));
+    upnpPFInterface_removePortMapping(node->eport, node->proto);
+    return TRUE;
 }
 
-int upnpPFInterface_addPortMapping(const char *eport, const char *iport, SupportedProtocol_t added_protocol)
+int upnpPFInterface_addPortMapping(MappingRule_t rules[], int num_of_rules)
 {
-    int r = 0;
-
     const char *str_proto;
+    int i, r;
+    for (i = 0; i < num_of_rules; i++)
+    {
+        str_proto = get_proto_str(rules[i].proto);
+        r = UPNP_AddPortMapping(g_urls->controlURL, g_data->first.servicetype,
+                                rules[i].eport, rules[i].iport, g_lanaddr, g_desc,
+                                str_proto, 0, LEASE_DURATION);
+        if (r != UPNPCOMMAND_SUCCESS)
+        {
+            LOG(LOG_ERR, "AddPortMapping(%s, %s, %s, %s) failed with code %d (%s)",
+                rules[i].eport, rules[i].iport, g_lanaddr, str_proto, r, strupnperror(r));
+            return -r;
+        }
+        LOG(LOG_INFO, "AddPortMapping(%s, %s, %s, %s) success", rules[i].eport, rules[i].iport, g_lanaddr, str_proto);
+    }
+    return SUCCESS;
+}
+
+int upnpPFInterface_updatePortMapping(MappingRule_t rules[], int num_of_rules)
+{
+    if (!g_data || !g_urls)
+    {
+        LOG(LOG_ERR, "UPnP has not been initialized");
+        return -ERR_NO_INIT;
+    }
+    int r = 0;
+    int retry_count = 0;
+
+    list list_remove;
 
     int i = 0;
-    char index[6];
-    char intClient[40];
-    char intPort[6];
-    char extPort[6];
-    char protocol[4];
-    char desc[80];
-    char enabled[6];
-    char rHost[64];
-    char duration[16];
-    printf(" i protocol exPort->inAddr:inPort description remoteHost leaseTime\n");
+    char index[6];      /* Port Mapping index */
+    char intClient[40]; /* Internal Client IP */
+    char intPort[6];    /* Internal Port Mapping */
+    char extPort[6];    /* External Port Mapping */
+    char protocol[4];   /* Protocol */
+    char desc[80];      /* Port Mapping Description */
+    char duration[16];  /* Expired Duration of this entry map */
+
+    // create a linked list.
+    // We don't need free function because we don't use malloc anywhere our struct.
+    list_new(&list_remove, sizeof(MappingRule_t), NULL /*freeFunction*/);
+
+    LOG(LOG_DBG, " i protocol exPort->inAddr:inPort description leaseTime");
     do
     {
         snprintf(index, 6, "%d", i);
-        rHost[0] = '\0';
-        enabled[0] = '\0';
         duration[0] = '\0';
         desc[0] = '\0';
         extPort[0] = '\0';
@@ -160,50 +191,79 @@ int upnpPFInterface_addPortMapping(const char *eport, const char *iport, Support
                                             g_data->first.servicetype,
                                             index,
                                             extPort, intClient, intPort,
-                                            protocol, desc, enabled,
-                                            rHost, duration);
+                                            protocol, desc, NULL /*enabled*/,
+                                            NULL /* Remote Host */, duration);
 
         if (r == 0)
         {
-            printf("%2d %s %5s->%s:%-5s '%s' '%s' %s\n",
-                   i, protocol, extPort, intClient, intPort,
-                   desc, rHost, duration);
-            // check if conflict port
-            if (strcmp(extPort, eport) == 0 && strcmp(desc, g_desc) != 0)
+            LOG(LOG_DBG, "%2d %s %5s->%s:%-5s '%s' %s",
+                i, protocol, extPort, intClient, intPort,
+                desc, duration);
+
+            // check old port mapping rule
+            if (strcmp(desc, g_desc) == 0)
             {
-                LOG(LOG_ERR, "External Port %s has been already in used", eport);
-                // @todo define Error code
-                return -2;
+                MappingRule_t rmnode;
+                strcpy(rmnode.eport, extPort);
+                strcpy(rmnode.iport, intPort);
+                if (strcmp(protocol, "UDP") == 0)
+                {
+                    rmnode.proto = UDP;
+                }
+                else if (strcmp(protocol, "TCP") == 0)
+                {
+                    rmnode.proto = TCP;
+                }
+                // add to linked list
+                list_append(&list_remove, &rmnode);
             }
-            // @todo Need variable to
-            // @todo Need check description == MAC for remove
         }
         else
         {
-            // @todo UPNP_GetGenericPortMappingEntry again with the same index entry if r != 713 (SpecifiedArrayIndexInvalid)
-            LOG(LOG_ERR, "GetGenericPortMappingEntry() returned %d (%s)", r, strupnperror(r));
+            // try again with the same index entry if r != 713 (SpecifiedArrayIndexInvalid)
+            if (r != 713)
+            {
+                if (retry_count == 5)
+                {
+                    return -ERR_RETRY;
+                }
+                retry_count++;
+                i--;
+                LOG(LOG_ERR, "GetGenericPortMappingEntry() returned %d (%s)", r, strupnperror(r));
+            }
+            else
+            {
+                LOG(LOG_DBG, "GetGenericPortMappingEntry() done");
+            }
         }
         i++;
     } while (r == 0);
 
-    str_proto = proto_str[added_protocol];
+    // iterate over the linked list to remove old rules
+    list_for_each(&list_remove, remove_rule);
 
-    get_list_port_mapping(0);
-
-    r = UPNP_AddPortMapping(g_urls->controlURL, g_data->first.servicetype,
-                            eport, iport, g_lanaddr, g_desc,
-                            str_proto, 0, "100000");
-    if (r != UPNPCOMMAND_SUCCESS)
+    if (upnpPFInterface_addPortMapping(rules, num_of_rules) != SUCCESS)
     {
-        LOG(LOG_ERR, "AddPortMapping(%s, %s, %s) failed with code %d (%s)",
-            eport, iport, g_lanaddr, r, strupnperror(r));
+        //@todo rollback
+        list_destroy(&list_remove);
         return -2;
     }
-    LOG(LOG_INFO, "AddPortMapping(%s, %s, %s) success", eport, iport, g_lanaddr);
-    return 0;
+
+    list_destroy(&list_remove);
+    return SUCCESS;
 }
 
-int upnpPFInterface_removePortMapping(const char *eport, SupportedProtocol_t protcol)
+int upnpPFInterface_removePortMapping(const char *eport, SupportedProtocol_t proto)
 {
-    return 0;
+    int r;
+    const char *str_proto = get_proto_str(proto);
+    r = UPNP_DeletePortMapping(g_urls->controlURL, g_data->first.servicetype, eport, str_proto, NULL);
+    if (r != UPNPCOMMAND_SUCCESS)
+    {
+        LOG(LOG_ERR, "UPNP_DeletePortMapping(%s, %s) failed with code : %d (%s)", eport, str_proto, r, strupnperror(r));
+        return -2;
+    }
+    LOG(LOG_INFO, "UPNP_DeletePortMapping(%s, %s) success", eport, str_proto);
+
+    return SUCCESS;
 }
