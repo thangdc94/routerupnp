@@ -33,7 +33,8 @@ int mqInterface_send(const char *message, int pid);
 /**
  * @brief Receive message from client
  * @details Message from client will send to message queue. We will read
- * message from this message queue.
+ * message from this message queue. If there is nothing to be read, the process
+ * will wait until queue has a message.
  * 
  * @param[out] msg_ptr pointer to message buffer. 
  * @warning You need to free() @p msg_ptr after use it.

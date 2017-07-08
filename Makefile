@@ -73,7 +73,7 @@ SOURCES_OBJECTS = $(shell echo $(APPLICATION_FILES) | xargs -n1 echo | sed -e 's
 TARGET_FILE = $(BIN_DIR)/routerupnp
 
 .PHONY: all
-all: directories $(TARGET_FILE)
+all: directories $(TARGET_FILE) test
 
 ifneq ($(MAKECMDGOALS),clean)
 -include $(SOURCES_OBJECTS:.o=.d)
@@ -90,6 +90,13 @@ $(TARGET_FILE): $(SOURCES_OBJECTS)
 clean:
 	-rm -rf $(OUTPUT_DIR)
 	-rm -rf $(DOC_DIR)
+	$(MAKE) -C test clean
+
+.PHONY: test
+test:
+	@echo "Building test"
+	$(MAKE) -C test
+	@echo "Build test done"
 
 .PHONY: directories
 directories:

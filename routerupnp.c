@@ -13,6 +13,7 @@
 #include "mq_interface.h"
 #include "upnp_pf_interface.h"
 #include "upnp_pf_errcode.h"
+#include "logutil.h"
 
 /**
  * @brief Main function
@@ -43,7 +44,15 @@ int main(int argc, char const *argv[])
         .proto = TCP,
     };
 
-    upnpPFInterface_updatePortMapping(rules, num_of_rules);
+    mqInterface_create();
+    char *msg_ptr = NULL;
+    while (1)
+    {
+        mqInterface_receive(&msg_ptr);
+        LOG(LOG_INFO, "Receive message %s", msg_ptr);
+        free(msg_ptr);
+        upnpPFInterface_updatePortMapping(rules, num_of_rules);
+    }
 
     return 0;
 }
