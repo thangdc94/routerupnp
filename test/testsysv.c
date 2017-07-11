@@ -50,7 +50,7 @@ typedef struct msgbuf
     char mtext[MSG_BUFFER_SIZE]; /**< message content*/
 } message_buf;
 
-void strfmt(char **strout, const char *fmt, ...)
+static void strfmt(char **strout, const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);

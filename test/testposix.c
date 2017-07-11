@@ -35,7 +35,7 @@
 /** Size of Receive Message Buffer  */
 #define MSG_BUFFER_SIZE MAX_MSG_SIZE + 10
 
-void strfmt(char **strout, const char *fmt, ...)
+static void strfmt(char **strout, const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
