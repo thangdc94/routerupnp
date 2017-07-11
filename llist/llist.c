@@ -13,7 +13,7 @@
 #include <string.h> /* to use memcpy */
 #include <assert.h> /* to use the assert macro */
  
-#include "list.h" /* to have linked list typedefs, structs and function prototypes available to us */
+#include "llist.h" /* to have linked list typedefs, structs and function prototypes available to us */
  
 void list_new(list *list, int elementSize, freeFunction freeFn)
 {
