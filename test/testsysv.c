@@ -43,14 +43,11 @@
 /** Size of Receive Message Buffer  */
 #define MSG_BUFFER_SIZE MAX_MSG_SIZE + 10
 
-/*
- * Declare the message structure.
- */
-
+/** Declare the message structure */
 typedef struct msgbuf
 {
-    long mtype;
-    char mtext[MSG_BUFFER_SIZE];
+    long mtype;                  /**< message type */
+    char mtext[MSG_BUFFER_SIZE]; /**< message content*/
 } message_buf;
 
 void strfmt(char **strout, const char *fmt, ...)
@@ -66,7 +63,16 @@ void strfmt(char **strout, const char *fmt, ...)
     va_end(args);
 }
 
-int main()
+/**
+ * @brief Main function
+ * @details You know it's a main function
+ * 
+ * @param[in] argc Argument count. We don't use it
+ * @param[in] argv Argument variables. We don't use it too 
+ * 
+ * @return Error code or 0 if OK
+ */
+int main(int argc, char **argv)
 {
     int msqid_server, msqid_client;
     key_t key_server, key_client;

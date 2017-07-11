@@ -18,10 +18,11 @@
 #include "logutil.h"
 #include "portmappingcfg.h"
 
+/** Request message structure */
 typedef struct _RequestMsg_t
 {
-    int pid;
-    PortMappingCfg_t data;
+    int pid;               /**< process id of the message */
+    PortMappingCfg_t data; /**< data content of the message */
 } RequestMsg_t;
 
 static RequestMsg_t parse_request(const char *content)
@@ -88,7 +89,7 @@ int main(int argc, char const *argv[])
 {
     while (SUCCESS != upnpPFInterface_init())
     {
-        LOG(LOG_INFO, "upnpPFInterface_init() failed. Try again...");
+        LOG(LOG_WARN, "upnpPFInterface_init() failed. Try again...");
         sleep(5);
     }
     mqInterface_create();

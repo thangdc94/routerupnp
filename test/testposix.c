@@ -48,6 +48,15 @@ void strfmt(char **strout, const char *fmt, ...)
     va_end(args);
 }
 
+/**
+ * @brief Main function
+ * @details You know it's a main function
+ * 
+ * @param[in] argc Argument count. We don't use it
+ * @param[in] argv Argument variables. We don't use it too 
+ * 
+ * @return Error code or 0 if OK
+ */
 int main(int argc, char **argv)
 {
     char client_queue_name[64];

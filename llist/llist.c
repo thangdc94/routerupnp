@@ -1,5 +1,5 @@
 /**
- * @file list.c
+ * @file llist.c
  * @brief Implementing a Generic Linked List 
  * @details Implementing a Generic Linked List. This is not thread safe
  * 

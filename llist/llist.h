@@ -1,5 +1,5 @@
 /**
- * @file list.h
+ * @file llist.h
  * @brief A  Generic Linked List
  * @details A Generic Linked List. This is not thread safe
  * 
