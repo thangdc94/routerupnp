@@ -39,6 +39,7 @@
 # Build folder
 /build
 /doc
+routerupnp_cfg.json
 
 # IDE generated files
 /.vscode

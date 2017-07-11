@@ -2,10 +2,15 @@ CFLAGS += -g -Wall
 LDFLAGS +=
 LDLIBS += -lrt
 
-EXECUTABLES=test
+EXECUTABLES = testposix testsysv
 
-$(EXECUTABLES): test.o
+.PHONY: all
+all: $(EXECUTABLES)
+
+testposix: testposix.o
+
+testsysv: testsysv.o
 
 .PHONY: clean
 clean:
-	rm -r $(EXECUTABLES) *.[adios]
+	$(RM) $(EXECUTABLES) *.[adios]

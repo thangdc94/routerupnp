@@ -30,7 +30,7 @@
 #define MAX_MESSAGES 10
 
 /** Max size of a message can be store in message queue */
-#define MAX_MSG_SIZE 256
+#define MAX_MSG_SIZE 512
 
 /** Size of Receive Message Buffer  */
 #define MSG_BUFFER_SIZE MAX_MSG_SIZE + 10
@@ -88,7 +88,7 @@ out:
 
 int mqInterface_receive(char **msg_ptr)
 {
-    *msg_ptr = (char *)malloc(MSG_BUFFER_SIZE * sizeof(char));
+    *msg_ptr = (char *)calloc(MSG_BUFFER_SIZE, sizeof(char));
     if (mq_receive(qd_server, *msg_ptr, MSG_BUFFER_SIZE, NULL) == -1)
     {
         LOG(LOG_ERR, "Server: mq_receive");

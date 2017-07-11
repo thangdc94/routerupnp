@@ -14,7 +14,7 @@
 #include <miniupnpc/upnpcommands.h>
 #include <miniupnpc/upnperrors.h>
 
-#include "list.h"
+#include "llist.h"
 
 #include "logutil.h"
 #include "upnp_pf_interface.h"
@@ -32,22 +32,8 @@
  */
 #define LEASE_DURATION "86400" // 1 day
 
-#ifdef SUPPORTED_PROTOCOLS
-
-/** Generate switch case for ::get_proto_str() */
-#define PROTOCOL_TEXT(NAME, TEXT) \
-    case NAME:                    \
-        return TEXT;
-const char *get_proto_str(SupportedProtocol_t proto)
-{
-    switch (proto)
-    {
-        SUPPORTED_PROTOCOLS(PROTOCOL_TEXT)
-    }
-    return "Unknown";
-}
-#undef PROTOCOL_TEXT
-#endif //SUPPORTED_PROTOCOLS
+/** Max number of times operation will be retried when error occured */
+#define MAX_RETRY_ON_ERR 5
 
 static struct UPNPUrls *g_urls;
 static struct IGDdatas *g_data;
@@ -127,7 +113,6 @@ int upnpPFInterface_init()
 static bool remove_rule(void *data)
 {
     MappingRule_t *node = (MappingRule_t *)data;
-    printf("%s\n", get_proto_str(node->proto));
     upnpPFInterface_removePortMapping(node->eport, node->proto);
     return TRUE;
 }
@@ -223,13 +208,15 @@ int upnpPFInterface_updatePortMapping(MappingRule_t rules[], int num_of_rules)
             // try again with the same index entry if r != 713 (SpecifiedArrayIndexInvalid)
             if (r != 713)
             {
-                if (retry_count == 5)
+                if (retry_count == MAX_RETRY_ON_ERR)
                 {
                     return -ERR_RETRY;
                 }
                 retry_count++;
                 i--;
-                LOG(LOG_ERR, "GetGenericPortMappingEntry() returned %d (%s)", r, strupnperror(r));
+                LOG(LOG_ERR, "GetGenericPortMappingEntry() returned %d (%s). Retrying...", r, strupnperror(r));
+                r = 0;
+                continue;
             }
             else
             {

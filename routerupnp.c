@@ -9,11 +9,71 @@
 
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
+#include <cjson/cJSON.h>
 
 #include "mq_interface.h"
 #include "upnp_pf_interface.h"
 #include "upnp_pf_errcode.h"
 #include "logutil.h"
+#include "portmappingcfg.h"
+
+typedef struct _RequestMsg_t
+{
+    int pid;
+    PortMappingCfg_t data;
+} RequestMsg_t;
+
+static RequestMsg_t parse_request(const char *content)
+{
+    RequestMsg_t tmp;
+    int i;
+    cJSON *root = cJSON_Parse(content);
+    cJSON *pid_json = cJSON_GetObjectItem(root, "pid");
+    if (cJSON_IsNumber(pid_json))
+    {
+        tmp.pid = pid_json->valueint;
+    }
+    PortMappingCfg_t cfg;
+    cJSON *cfg_json = cJSON_GetObjectItem(root, "data");
+    if (cJSON_IsObject(cfg_json))
+    {
+        cJSON *enable_json = cJSON_GetObjectItem(cfg_json, "enable");
+        if (cJSON_IsBool(enable_json))
+        {
+            cfg.is_enable = cJSON_IsTrue(enable_json);
+        }
+        cJSON *rules = cJSON_GetObjectItem(cfg_json, "rules");
+        if (cJSON_IsArray(rules))
+        {
+            int arr_size = cJSON_GetArraySize(rules);
+            cfg.numofrules = arr_size;
+            MappingRule_t *map = (MappingRule_t *)malloc(arr_size * sizeof(MappingRule_t));
+            cJSON *rule_item;
+            for (i = 0; i < arr_size; i++)
+            {
+                rule_item = cJSON_GetArrayItem(rules, i);
+                strcpy(map[i].eport, (cJSON_GetObjectItem(rule_item, "eport"))->valuestring);
+                strcpy(map[i].iport, (cJSON_GetObjectItem(rule_item, "iport"))->valuestring);
+                if (strcmp("UDP", (cJSON_GetObjectItem(rule_item, "proto"))->valuestring) == 0)
+                {
+                    map[i].proto = UDP;
+                }
+                else
+                {
+                    map[i].proto = TCP;
+                }
+            }
+            cfg.rules = map;
+        }
+    }
+    if (root != NULL)
+    {
+        cJSON_Delete(root);
+    }
+    tmp.data = cfg;
+    return tmp;
+}
 
 /**
  * @brief Main function
@@ -28,30 +88,30 @@ int main(int argc, char const *argv[])
 {
     while (SUCCESS != upnpPFInterface_init())
     {
+        LOG(LOG_INFO, "upnpPFInterface_init() failed. Try again...")
         sleep(5);
     }
-    int num_of_rules = 2;
-    MappingRule_t rules[num_of_rules];
-    rules[0] = (MappingRule_t){
-        .eport = "8888",
-        .iport = "8888",
-        .proto = UDP,
-    };
-
-    rules[1] = (MappingRule_t){
-        .eport = "9999",
-        .iport = "9999",
-        .proto = TCP,
-    };
-
     mqInterface_create();
     char *msg_ptr = NULL;
+
     while (1)
     {
         mqInterface_receive(&msg_ptr);
         LOG(LOG_INFO, "Receive message %s", msg_ptr);
+        RequestMsg_t request = parse_request(msg_ptr);
+        PortMappingCfg_t pm_cfg = request.data;
         free(msg_ptr);
-        upnpPFInterface_updatePortMapping(rules, num_of_rules);
+        if (upnpPFInterface_updatePortMapping(pm_cfg.rules, pm_cfg.numofrules) < 0)
+        {
+            mqInterface_send("Error", request.pid);
+        }
+        else
+        {
+            // @ fix error on save
+            PMCFG_saveConfig(&pm_cfg);
+            mqInterface_send("OK", request.pid);
+        }
+        free(pm_cfg.rules);
     }
 
     return 0;

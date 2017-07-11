@@ -1,13 +1,14 @@
 /**
- * @file test.c
- * @brief Test application
- * @details test Communicate with routerupnp process.
+ * @file testposix.c
+ * @brief Application to test POSIX message queue
+ * @details test Communicate with routerupnp process over POSIX message queue.
  * 
  * @author Pham Ngoc Thang (thangdc94)
  * @bug No known bug
  */
 
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
@@ -29,10 +30,23 @@
 #define MAX_MESSAGES 10
 
 /** Max size of a message can be store in message queue */
-#define MAX_MSG_SIZE 256
+#define MAX_MSG_SIZE 512
 
 /** Size of Receive Message Buffer  */
 #define MSG_BUFFER_SIZE MAX_MSG_SIZE + 10
+
+void strfmt(char **strout, const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    int n = vsnprintf(NULL, 0, fmt, args);
+    va_end(args);
+
+    *strout = malloc(n + 1);
+    va_start(args, fmt);
+    vsprintf(*strout, fmt, args);
+    va_end(args);
+}
 
 int main(int argc, char **argv)
 {
@@ -66,26 +80,34 @@ int main(int argc, char **argv)
     printf("Ask for a token (Press <ENTER>): ");
 
     char temp_buf[10];
+    char *data_test = "{\"enable\":true,\"rules\":[{\"eport\":\"9999\",\"iport\":\"9999\",\"proto\":\"UDP\"}]}";
 
     while (fgets(temp_buf, 2, stdin))
     {
+        char *request_msg;
+        strfmt(&request_msg, "{\"pid\":%d, \"data\":%s}", getpid(), data_test);
 
         // send message to server
-        if (mq_send(qd_server, client_queue_name, strlen(client_queue_name), 0) == -1)
+        if (mq_send(qd_server, request_msg, strlen(request_msg), 0) == -1)
         {
+            free(request_msg);
             perror("Client: Not able to send message to server");
             continue;
         }
+        else
+        {
+            free(request_msg);
+        }
 
-        // // receive response from server
-
-        // if (mq_receive(qd_client, in_buffer, MSG_BUFFER_SIZE, NULL) == -1)
-        // {
-        //     perror("Client: mq_receive");
-        //     exit(1);
-        // }
-        // // display token received from server
-        // printf("Client: Token received from server: %s\n\n", in_buffer);
+        // receive response from server
+        memset(in_buffer, 0, strlen(in_buffer));
+        if (mq_receive(qd_client, in_buffer, MSG_BUFFER_SIZE, NULL) == -1)
+        {
+            perror("Client: mq_receive");
+            exit(1);
+        }
+        // display token received from server
+        printf("Client: Token received from server: %s\n\n", in_buffer);
 
         printf("Ask for a token (Press ): ");
     }

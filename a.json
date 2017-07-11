@@ -1,8 +1,0 @@
-{
-    "pid": "1234",
-    "pfInfo": {
-        "enable": "true",
-        "rtsp_ext_port": "8888",
-        "web_ext_port": "8080"
-    }
-}

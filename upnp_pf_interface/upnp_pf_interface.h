@@ -10,37 +10,7 @@
 #ifndef __UPNP_PF_INTERFACE_H
 #define __UPNP_PF_INTERFACE_H
 
-/** Using X Macro technique for enum to string */
-#define SUPPORTED_PROTOCOLS(X) \
-    X(UDP, "UDP")              \
-    X(TCP, "TCP")
-
-/** Generate enum */
-#define PROTOCOL_ENUM(NAME, TEXT) NAME,
-
-/** UPnP Supported Protocols  */
-typedef enum {
-    SUPPORTED_PROTOCOLS(PROTOCOL_ENUM)
-} SupportedProtocol_t;
-#undef PROTOCOL_ENUM
-
-/** Mapping input for AddPortMapping */
-typedef struct
-{
-    char eport[6];             /**< external port */
-    char iport[6];             /**< internal port */
-    SupportedProtocol_t proto; /**< protocol will be mapped */
-} MappingRule_t;
-
-/**
- * @brief Get Protocol string from SupportedProtocol_t
- * @details Get Protocol string from SupportedProtocol_t. This function will use
- * define #SUPPORTED_PROTOCOLS(X)
- *
- * @param[in] proto protocol you want to get string
- * @return string of protocol
- */
-extern const char *get_proto_str(SupportedProtocol_t proto);
+#include "mappingrule.h"
 
 /**
  * @brief Init for UPnP Interface

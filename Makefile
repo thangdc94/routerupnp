@@ -29,6 +29,7 @@ INCLUDES= \
 	-I./mq_interface \
 	-I./upnp_pf_interface \
 	-I./llist \
+	-I./portmappingcfg \
 	\
 
 DEFINES = \
@@ -45,12 +46,13 @@ COMPILER_FLAGS ?= \
 
 APPLICATION_FILES = \
 	$(APP_DIRECTORY)/routerupnp.c 	\
-	$(APP_DIRECTORY)/mq_interface/mq_posix_interface.c	\
+	$(APP_DIRECTORY)/mq_interface/mq_sysv_interface.c	\
 	$(APP_DIRECTORY)/upnp_pf_interface/upnp_pf_interface.c \
 	$(APP_DIRECTORY)/upnp_pf_interface/upnp_pf_errcode.c \
 	$(APP_DIRECTORY)/util/util.c \
 	$(APP_DIRECTORY)/util/netutil/netutil.c \
-	$(APP_DIRECTORY)/llist/list.c
+	$(APP_DIRECTORY)/llist/llist.c \
+	$(APP_DIRECTORY)/portmappingcfg/portmappingcfg.c \
 
 # -MMD and -MF generates Makefile dependencies while at the same time compiling.
 # -MP notes to add a dummy 'build' rule for each header file.  This 
@@ -60,7 +62,7 @@ DEPENDENCY_FLAGS ?= -MMD -MP -MF $(@D)/$*.d
 
 CFLAGS += $(INCLUDES) $(DEFINES) $(COMPILER_FLAGS) $(DEPENDENCY_FLAGS)
 LDFLAGS += 
-LDLIBS += -lminiupnpc -lrt -lpthread
+LDLIBS += -lminiupnpc -lrt -lpthread -lcjson
 
 DOC_DIR=$(APP_DIRECTORY)/doc
 OUTPUT_DIR=$(APP_DIRECTORY)/build
@@ -72,8 +74,11 @@ BIN_DIR=$(OUTPUT_DIR)/bin
 SOURCES_OBJECTS = $(shell echo $(APPLICATION_FILES) | xargs -n1 echo | sed -e 's^.*/\(.*\)\.c^$(OUTPUT_DIR)/\1\.o^')
 TARGET_FILE = $(BIN_DIR)/routerupnp
 
+.PHONY:default
+default: directories $(TARGET_FILE)
+
 .PHONY: all
-all: directories $(TARGET_FILE) test
+all: default test
 
 ifneq ($(MAKECMDGOALS),clean)
 -include $(SOURCES_OBJECTS:.o=.d)
