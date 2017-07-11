@@ -88,7 +88,7 @@ int main(int argc, char const *argv[])
 {
     while (SUCCESS != upnpPFInterface_init())
     {
-        LOG(LOG_INFO, "upnpPFInterface_init() failed. Try again...")
+        LOG(LOG_INFO, "upnpPFInterface_init() failed. Try again...");
         sleep(5);
     }
     mqInterface_create();

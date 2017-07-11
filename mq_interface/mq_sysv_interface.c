@@ -128,5 +128,12 @@ int mqInterface_receive(char **msg_ptr)
 
 int mqInterface_destroy()
 {
+    if (msgctl(g_msqid, IPC_RMID, NULL) == -1)
+    {
+        LOG(LOG_ERR, "Message queue could not be deleted");
+        return -1;
+    }
+
+    LOG(LOG_DBG, "Message queue was deleted");
     return 0;
 }
