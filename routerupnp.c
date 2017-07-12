@@ -101,6 +101,18 @@ int main(int argc, char const *argv[])
         LOG(LOG_INFO, "Receive message %s", msg_ptr);
         RequestMsg_t request = parse_request(msg_ptr);
         PortMappingCfg_t pm_cfg = request.data;
+        // pm_cfg.is_enable = 1;
+        // pm_cfg.numofrules = 2;
+        // MappingRule_t rules[2];
+        // rules[0] = (MappingRule_t){"7777", "7777", UDP};
+        // rules[1] = (MappingRule_t){"5555", "6666", TCP};
+        // pm_cfg.rules = rules;
+
+        for (int i = 0; i < pm_cfg.numofrules; i++)
+        {
+            printf("%s\n", (pm_cfg.rules)[i].iport);
+        }
+
         free(msg_ptr);
         if (upnpPFInterface_updatePortMapping(pm_cfg.rules, pm_cfg.numofrules) < 0)
         {
@@ -108,7 +120,6 @@ int main(int argc, char const *argv[])
         }
         else
         {
-            // @ fix error on save
             PMCFG_saveConfig(&pm_cfg);
             mqInterface_send("OK", request.pid);
         }

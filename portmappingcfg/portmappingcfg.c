@@ -178,8 +178,6 @@ int PMCFG_saveConfig(PortMappingCfg_t *pm_cfg)
         }
         char *str = cJSON_Print(root);
         fprintf(fd, "%s\n", str); // save data to file
-        cJSON_Delete(rule_item);
-        cJSON_Delete(rules);
         cJSON_Delete(root);
         free(str);
         fclose(fd);

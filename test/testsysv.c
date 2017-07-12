@@ -20,7 +20,7 @@
  * pathname (which must refer to an existing, accessible file or directory) to 
  * generate key for queue 
  */
-#define QUEUE_NAME "/home/thang/test"
+#define QUEUE_NAME "/tmp"
 
 /**
  * Type of message (msgtyp) <br>

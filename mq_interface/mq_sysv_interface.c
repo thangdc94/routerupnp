@@ -23,7 +23,7 @@
  * pathname (which must refer to an existing, accessible file or directory) to 
  * generate key for queue 
  */
-#define QUEUE_NAME "/home/thang/test"
+#define QUEUE_NAME "/tmp"
 
 /**
  * Type of message (msgtyp) <br>
@@ -62,7 +62,7 @@ int mqInterface_create()
         LOG(LOG_ERR, "Server: msgget (server):%s", strerror(errno));
         return -1;
     }
-    LOG(LOG_DBG, "mqInterface_create success");
+    LOG(LOG_DBG, "mqInterface_create success msqid_server = %d", g_msqid);
     return 0;
 }
 
@@ -87,7 +87,7 @@ int mqInterface_send(const char *message, int pid)
         LOG(LOG_ERR, "Server: msgget (client):%s", strerror(errno));
         return -1;
     }
-    LOG(LOG_DBG, "msgget: msgget succeeded: msqid_client = %d\n", msqid_client);
+    LOG(LOG_DBG, "msgget: msgget succeeded: msqid_client = %d", msqid_client);
     sbuf.mtype = 1;
     strcpy(sbuf.mtext, message);
     buf_length = strlen(sbuf.mtext) + 1;
@@ -112,7 +112,6 @@ int mqInterface_receive(char **msg_ptr)
         long mtype;
         char mtext[MSG_BUFFER_SIZE];
     } rbuf;
-    *msg_ptr = (char *)calloc(MSG_BUFFER_SIZE, sizeof(char));
     /*
      * Receive an answer of message type 1.
      */
@@ -122,6 +121,7 @@ int mqInterface_receive(char **msg_ptr)
         return -1;
     }
     LOG(LOG_DBG, "mqInterface_receive success");
+    *msg_ptr = (char *)calloc(MSG_BUFFER_SIZE, sizeof(char));
     strcpy(*msg_ptr, rbuf.mtext);
     return 0;
 }

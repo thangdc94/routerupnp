@@ -15,11 +15,20 @@
 /**
  * @brief Init for UPnP Interface
  * @details Discovery Device and setup some useful variables
- * for this API
+ * for this API. 
+ * @warning Need to call ::upnpPFInterface_destroy()
  * 
  * @return 0 if OK and -1 if error
  */
 int upnpPFInterface_init();
+
+/**
+ * @brief Destroy UPnP Interface
+ * @details free memory of ::upnpPFInterface_init() to prevent memory leak
+ * 
+ * @return 0 if OK and -1 if error
+ */
+int upnpPFInterface_destroy();
 
 /**
  * @brief Add port forwarding rules

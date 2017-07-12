@@ -45,18 +45,18 @@ static char g_desc[13] = "description";
 int upnpPFInterface_init()
 {
     struct UPNPDev *devlist = 0;
-    const char *multicastif = 0;
-    const char *minissdpdpath = 0;
-    int localport = UPNP_LOCAL_PORT_ANY;
     int error = 0;
-    int ipv6 = 0;
+    int ipv6 = 0; // not use IPv6
     int i;
     char *desc;
 
     unsigned char ttl = 2; /* defaulting to 2 */
     LOG(LOG_INFO, "UPnP Discovering ...");
-    if ((devlist = upnpDiscover(2000, multicastif, minissdpdpath,
-                                localport, ipv6, ttl, &error)))
+
+    // discovery device in network
+    if ((devlist = upnpDiscover(2000, NULL /* multicastif */,
+                                NULL /* minissdpdsock */,
+                                UPNP_LOCAL_PORT_ANY, ipv6, ttl, &error)))
     {
         struct UPNPDev *device;
 
@@ -101,10 +101,19 @@ int upnpPFInterface_init()
             strcpy(g_desc, desc);
             free(desc);
         }
+        else
+        {
+            LOG(LOG_ERR, "No valid UPnP Internet Gateway Device found");
+            return -1;
+        }
+
+        // free device list
+        freeUPNPDevlist(devlist);
+        devlist = 0;
     }
     else
     {
-        LOG(LOG_ERR, "No valid UPnP Internet Gateway Device found");
+        LOG(LOG_ERR, "No IGD UPnP Device found on the network");
         return -1;
     }
     return SUCCESS;
@@ -138,6 +147,12 @@ int upnpPFInterface_addPortMapping(MappingRule_t rules[], int num_of_rules)
     return SUCCESS;
 }
 
+int upnpPFInterface_diablePortMapping(MappingRule_t rules[], int num_of_rules)
+{
+    //@todo implement this
+    return SUCCESS;
+}
+
 int upnpPFInterface_updatePortMapping(MappingRule_t rules[], int num_of_rules)
 {
     if (!g_data || !g_urls)
@@ -160,7 +175,7 @@ int upnpPFInterface_updatePortMapping(MappingRule_t rules[], int num_of_rules)
     char duration[16];  /* Expired Duration of this entry map */
 
     // create a linked list.
-    // We don't need free function because we don't use malloc anywhere our struct.
+    // We don't need free function because we don't use malloc anywhere in our struct.
     list_new(&list_remove, sizeof(MappingRule_t), NULL /*freeFunction*/);
 
     LOG(LOG_DBG, " i protocol exPort->inAddr:inPort description leaseTime");
@@ -210,11 +225,12 @@ int upnpPFInterface_updatePortMapping(MappingRule_t rules[], int num_of_rules)
             {
                 if (retry_count == MAX_RETRY_ON_ERR)
                 {
+                    LOG(LOG_ERR, "GetGenericPortMappingEntry() returned %d (%s)", r, strupnperror(r));
                     return -ERR_RETRY;
                 }
                 retry_count++;
                 i--;
-                LOG(LOG_ERR, "GetGenericPortMappingEntry() returned %d (%s). Retrying...", r, strupnperror(r));
+                LOG(LOG_WARN, "GetGenericPortMappingEntry() returned %d (%s). Retrying...", r, strupnperror(r));
                 r = 0;
                 continue;
             }
@@ -252,5 +268,16 @@ int upnpPFInterface_removePortMapping(const char *eport, SupportedProtocol_t pro
     }
     LOG(LOG_INFO, "UPNP_DeletePortMapping(%s, %s) success", eport, str_proto);
 
+    return SUCCESS;
+}
+
+int upnpPFInterface_destroy()
+{
+    free(g_data);
+    g_data = NULL;
+
+    FreeUPNPUrls(g_urls);
+    free(g_urls);
+    g_urls = NULL;
     return SUCCESS;
 }

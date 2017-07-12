@@ -9,8 +9,8 @@
  * @see http://pseudomuto.com/development/2013/05/02/implementing-a-generic-linked-list-in-c/
  */
 
-#ifndef __LIST_H
-#define __LIST_H
+#ifndef __LINKED_LIST_H_
+#define __LINKED_LIST_H_
 
 /**
  * @brief a pointer function used to free malloc'd objects
@@ -136,4 +136,4 @@ void list_head(list *list, void *element, bool removeFromList);
  */
 void list_tail(list *list, void *element);
 
-#endif //__LIST_H
+#endif //__LINKED_LIST_H_
