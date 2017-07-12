@@ -12,6 +12,15 @@
 
 #include "mappingrule.h"
 
+/** 
+ * Expired Duration for Port Mapping in seconds. 
+ * Port Mapping Rule will be remove after amounts of this time.
+ * It's will be helpful if device removed from network and never comeback,
+ * rule will be removed automatically after an amount of time.
+ * Value 0 means never expire.
+ */
+#define LEASE_DURATION 86400 // 1 day
+
 /**
  * @brief Init for UPnP Interface
  * @details Discovery Device and setup some useful variables

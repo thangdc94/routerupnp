@@ -26,14 +26,14 @@
 #define LOG_LEVEL LOG_DBG
 #endif //LOG_LEVEL
 
-/** 
- * Expired Duration for Port Mapping in seconds. 
- * Port Mapping Rule will be remove after amounts of this time.
- * It's will be helpful if device removed from network and never comeback,
- * rule will be removed automatically after an amount of time.
- * Value 0 means never expire.
- */
-#define LEASE_DURATION "86400" // 1 day
+/** Get string of input */
+#define VAL(x) #x
+
+/** Convert int to string */
+#define STRINGIFY(x) VAL(x)
+
+/** lease duration in string */
+#define LEASE_DURATION_STR STRINGIFY(LEASE_DURATION)
 
 /** Max number of times operation will be retried when error occured */
 #define MAX_RETRY_ON_ERR 5
@@ -138,7 +138,7 @@ int upnpPFInterface_addPortMapping(MappingRule_t rules[], int num_of_rules)
         str_proto = get_proto_str(rules[i].proto);
         r = UPNP_AddPortMapping(g_urls->controlURL, g_data->first.servicetype,
                                 rules[i].eport, rules[i].iport, g_lanaddr, g_desc,
-                                str_proto, 0, LEASE_DURATION);
+                                str_proto, 0, LEASE_DURATION_STR);
         if (r != UPNPCOMMAND_SUCCESS)
         {
             LOG(LOG_ERR, "AddPortMapping(%s, %s, %s, %s) failed with code %d (%s)",

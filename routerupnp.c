@@ -24,7 +24,7 @@
  * This should be the same as ::LEASE_DURATION so the rule will be stored on router
  * until device is removed from network.
  */
-#define SCHEDULE_PERIOD 5
+#define SCHEDULE_PERIOD LEASE_DURATION
 
 /** Request message structure */
 typedef struct _RequestMsg_t
@@ -137,16 +137,23 @@ int main(int argc, char const *argv[])
             PortMappingCfg_t pm_cfg = request.data;
 
             free(msg_ptr);
-            if (upnpPFInterface_updatePortMapping(pm_cfg.rules, pm_cfg.numofrules) < 0)
+            if (pm_cfg.is_enable)
             {
-                // handle error
-                mqInterface_send("Error", request.pid);
+                if (upnpPFInterface_updatePortMapping(pm_cfg.rules, pm_cfg.numofrules) < 0)
+                {
+                    // handle error
+                    mqInterface_send("Error", request.pid);
+                }
+                else
+                {
+                    alarm(SCHEDULE_PERIOD); // reset timer
+                    PMCFG_saveConfig(&pm_cfg);
+                    mqInterface_send("OK", request.pid);
+                }
             }
             else
             {
-                alarm(SCHEDULE_PERIOD); // reset timer
-                PMCFG_saveConfig(&pm_cfg);
-                mqInterface_send("OK", request.pid);
+                
             }
             free(pm_cfg.rules);
         }
