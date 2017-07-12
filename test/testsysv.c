@@ -79,6 +79,8 @@ int main(int argc, char **argv)
     message_buf sbuf, rbuf;
     size_t buf_length;
 
+    char c;
+
     key_server = ftok(QUEUE_NAME, 1);
 
     fprintf(stderr, "msgget: Calling msgget(%d,\%#o)\n", key_server, QUEUE_PERMISSIONS);
@@ -99,7 +101,7 @@ int main(int argc, char **argv)
 
     if ((msqid_client = msgget(key_client, IPC_CREAT | QUEUE_PERMISSIONS)) < 0)
     {
-        perror(">>msgget");
+        perror("msgget");
         exit(1);
     }
     else
@@ -113,19 +115,25 @@ int main(int argc, char **argv)
 
     sbuf.mtype = MESSAGE_TYPE;
 
-    char *data_test = "{\"enable\":true,\"rules\":[{\"eport\":\"9999\",\"iport\":\"9999\",\"proto\":\"UDP\"}]}";
     char *request_msg;
-    strfmt(&request_msg, "{\"pid\":%d, \"data\":%s}", getpid(), data_test);
-
-    strcpy(sbuf.mtext, request_msg);
-
-    buf_length = strlen(sbuf.mtext) + 1;
 
     /*
      * Send a message.
      */
-    while (getchar() != 'q')
+    while ((c = getchar()) != 'q')
     {
+        if (c == 'd')
+        {
+            char *data_test = "{\"enable\":false,\"rules\":[{\"eport\":\"9999\",\"iport\":\"9999\",\"proto\":\"UDP\"}]}";
+            strfmt(&request_msg, "{\"pid\":%d, \"data\":%s}", getpid(), data_test);
+        }
+        else
+        {
+            char *data_test = "{\"enable\":true,\"rules\":[{\"eport\":\"9999\",\"iport\":\"9999\",\"proto\":\"UDP\"}]}";
+            strfmt(&request_msg, "{\"pid\":%d, \"data\":%s}", getpid(), data_test);
+        }
+        strcpy(sbuf.mtext, request_msg);
+        buf_length = strlen(sbuf.mtext) + 1;
         // send message to server
         if (msgsnd(msqid_server, &sbuf, buf_length, IPC_NOWAIT) < 0)
         {

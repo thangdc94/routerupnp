@@ -51,13 +51,11 @@ int upnpPFInterface_addPortMapping(MappingRule_t rules[], int num_of_rules);
 
 /**
  * @brief Disable port forwarding rules
- * @details Disable port forwarding rules on Router using UPnP
+ * @details Disable port forwarding rules on Router using UPnP by removing them
  * 
- * @param[in] rules array of Rule to disable
- * @param[in] num_of_rules size of rule array
  * @return 0 if OK or error code if failed
  */
-int upnpPFInterface_diablePortMapping(MappingRule_t rules[], int num_of_rules);
+int upnpPFInterface_diablePortMapping();
 
 /**
  * @brief Update port forwarding rules

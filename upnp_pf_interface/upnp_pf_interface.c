@@ -38,8 +38,8 @@
 /** Max number of times operation will be retried when error occured */
 #define MAX_RETRY_ON_ERR 5
 
-static struct UPNPUrls *g_urls;
-static struct IGDdatas *g_data;
+static struct UPNPUrls g_urls;
+static struct IGDdatas g_data;
 static char g_lanaddr[64] = "unset"; /* my ip address on the LAN */
 static char g_desc[13] = "description";
 
@@ -76,26 +76,23 @@ int upnpPFInterface_init()
             LOG(LOG_ERR, "upnpDiscover() error code=%d", error);
         }
 
-        g_data = (struct IGDdatas *)malloc(sizeof(struct IGDdatas));
-        g_urls = (struct UPNPUrls *)malloc(sizeof(struct UPNPUrls));
-
-        if (UPNP_GetIGDFromUrl(0, g_urls, g_data, g_lanaddr, sizeof(g_lanaddr)) || (i = UPNP_GetValidIGD(devlist, g_urls, g_data, g_lanaddr, sizeof(g_lanaddr))))
+        if (UPNP_GetIGDFromUrl(0, &g_urls, &g_data, g_lanaddr, sizeof(g_lanaddr)) || (i = UPNP_GetValidIGD(devlist, &g_urls, &g_data, g_lanaddr, sizeof(g_lanaddr))))
         {
             switch (i)
             {
             case 1:
-                LOG(LOG_DBG, "Found valid IGD : %s", g_urls->controlURL);
+                LOG(LOG_DBG, "Found valid IGD : %s", g_urls.controlURL);
                 break;
             case 2:
-                LOG(LOG_DBG, "Found a (not connected?) IGD : %s", g_urls->controlURL);
+                LOG(LOG_DBG, "Found a (not connected?) IGD : %s", g_urls.controlURL);
                 LOG(LOG_DBG, "Trying to continue anyway");
                 break;
             case 3:
-                LOG(LOG_DBG, "UPnP device found. Is it an IGD ? : %s", g_urls->controlURL);
+                LOG(LOG_DBG, "UPnP device found. Is it an IGD ? : %s", g_urls.controlURL);
                 LOG(LOG_DBG, "Trying to continue anyway");
                 break;
             default:
-                LOG(LOG_DBG, "Found device (igd ?) : %s", g_urls->controlURL);
+                LOG(LOG_DBG, "Found device (igd ?) : %s", g_urls.controlURL);
                 LOG(LOG_DBG, "Trying to continue anyway");
             }
             LOG(LOG_DBG, "Local LAN ip address : %s", g_lanaddr);
@@ -136,7 +133,7 @@ int upnpPFInterface_addPortMapping(MappingRule_t rules[], int num_of_rules)
     for (i = 0; i < num_of_rules; i++)
     {
         str_proto = get_proto_str(rules[i].proto);
-        r = UPNP_AddPortMapping(g_urls->controlURL, g_data->first.servicetype,
+        r = UPNP_AddPortMapping(g_urls.controlURL, g_data.first.servicetype,
                                 rules[i].eport, rules[i].iport, g_lanaddr, g_desc,
                                 str_proto, 0, LEASE_DURATION_STR);
         if (r != UPNPCOMMAND_SUCCESS)
@@ -150,19 +147,85 @@ int upnpPFInterface_addPortMapping(MappingRule_t rules[], int num_of_rules)
     return SUCCESS;
 }
 
-int upnpPFInterface_diablePortMapping(MappingRule_t rules[], int num_of_rules)
+int upnpPFInterface_diablePortMapping()
 {
-    //@todo implement this
+    int r = 0;
+    int retry_count = 0;
+
+    int i = 0;
+    char index[6];      /* Port Mapping index */
+    char intClient[40]; /* Internal Client IP */
+    char intPort[6];    /* Internal Port Mapping */
+    char extPort[6];    /* External Port Mapping */
+    char protocol[4];   /* Protocol */
+    char desc[80];      /* Port Mapping Description */
+    char duration[16];  /* Expired Duration of this entry map */
+
+    LOG(LOG_DBG, " i protocol exPort->inAddr:inPort description leaseTime");
+    do
+    {
+        snprintf(index, 6, "%d", i);
+        duration[0] = '\0';
+        desc[0] = '\0';
+        extPort[0] = '\0';
+        intPort[0] = '\0';
+        intClient[0] = '\0';
+        r = UPNP_GetGenericPortMappingEntry(g_urls.controlURL,
+                                            g_data.first.servicetype,
+                                            index,
+                                            extPort, intClient, intPort,
+                                            protocol, desc, NULL /*enabled*/,
+                                            NULL /* Remote Host */, duration);
+
+        if (r == 0)
+        {
+            LOG(LOG_DBG, "%2d %s %5s->%s:%-5s '%s' %s",
+                i, protocol, extPort, intClient, intPort,
+                desc, duration);
+
+            // check old port mapping rule
+            if (strcmp(desc, g_desc) == 0)
+            {
+                // remove rule
+
+                if (strcmp(protocol, "UDP") == 0)
+                {
+                    upnpPFInterface_removePortMapping(extPort, UDP);
+                }
+                else
+                {
+                    upnpPFInterface_removePortMapping(extPort, TCP);
+                }
+            }
+        }
+        else
+        {
+            // try again with the same index entry if r != 713 (SpecifiedArrayIndexInvalid)
+            if (r != 713)
+            {
+                if (retry_count == MAX_RETRY_ON_ERR)
+                {
+                    LOG(LOG_ERR, "GetGenericPortMappingEntry() returned %d (%s)", r, strupnperror(r));
+                    return -ERR_RETRY;
+                }
+                retry_count++;
+                i--;
+                LOG(LOG_WARN, "GetGenericPortMappingEntry() returned %d (%s). Retrying...", r, strupnperror(r));
+                r = 0;
+                continue;
+            }
+            else
+            {
+                LOG(LOG_DBG, "GetGenericPortMappingEntry() done");
+            }
+        }
+        i++;
+    } while (r == 0);
     return SUCCESS;
 }
 
 int upnpPFInterface_updatePortMapping(MappingRule_t rules[], int num_of_rules)
 {
-    if (!g_data || !g_urls)
-    {
-        LOG(LOG_ERR, "UPnP has not been initialized");
-        return -ERR_NO_INIT;
-    }
     int r = 0;
     int retry_count = 0;
 
@@ -190,8 +253,8 @@ int upnpPFInterface_updatePortMapping(MappingRule_t rules[], int num_of_rules)
         extPort[0] = '\0';
         intPort[0] = '\0';
         intClient[0] = '\0';
-        r = UPNP_GetGenericPortMappingEntry(g_urls->controlURL,
-                                            g_data->first.servicetype,
+        r = UPNP_GetGenericPortMappingEntry(g_urls.controlURL,
+                                            g_data.first.servicetype,
                                             index,
                                             extPort, intClient, intPort,
                                             protocol, desc, NULL /*enabled*/,
@@ -263,7 +326,7 @@ int upnpPFInterface_removePortMapping(const char *eport, SupportedProtocol_t pro
 {
     int r;
     const char *str_proto = get_proto_str(proto);
-    r = UPNP_DeletePortMapping(g_urls->controlURL, g_data->first.servicetype, eport, str_proto, NULL);
+    r = UPNP_DeletePortMapping(g_urls.controlURL, g_data.first.servicetype, eport, str_proto, NULL);
     if (r != UPNPCOMMAND_SUCCESS)
     {
         LOG(LOG_ERR, "UPNP_DeletePortMapping(%s, %s) failed with code : %d (%s)", eport, str_proto, r, strupnperror(r));
@@ -276,11 +339,6 @@ int upnpPFInterface_removePortMapping(const char *eport, SupportedProtocol_t pro
 
 int upnpPFInterface_destroy()
 {
-    free(g_data);
-    g_data = NULL;
-
-    FreeUPNPUrls(g_urls);
-    free(g_urls);
-    g_urls = NULL;
+    FreeUPNPUrls(&g_urls);
     return SUCCESS;
 }

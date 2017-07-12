@@ -57,7 +57,7 @@ static RequestMsg_t parse_request(const char *content)
         {
             int arr_size = cJSON_GetArraySize(rules);
             cfg.numofrules = arr_size;
-            MappingRule_t *map = (MappingRule_t *)malloc(arr_size * sizeof(MappingRule_t));
+            MappingRule_t *map = malloc(arr_size * sizeof(MappingRule_t));
             cJSON *rule_item;
             for (i = 0; i < arr_size; i++)
             {
@@ -153,7 +153,20 @@ int main(int argc, char const *argv[])
             }
             else
             {
-                
+                // remove rule and exit
+                if (upnpPFInterface_diablePortMapping() < 0)
+                {
+                    // handle error
+                    mqInterface_send("Error", request.pid);
+                }
+                else
+                {
+                    mqInterface_send("OK", request.pid);
+                    PMCFG_saveConfig(&pm_cfg);
+                    free(pm_cfg.rules);
+                    upnpPFInterface_destroy();
+                    exit(0);
+                }
             }
             free(pm_cfg.rules);
         }

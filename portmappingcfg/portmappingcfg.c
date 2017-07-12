@@ -76,7 +76,7 @@ static char *read_file(const char *filename)
     }
 
     /* allocate content buffer */
-    content = (char *)malloc((size_t)length + sizeof(""));
+    content = malloc((size_t)length + sizeof(""));
     if (content == NULL)
     {
         goto cleanup;
@@ -121,7 +121,7 @@ PortMappingCfg_t PMCFG_getConfig()
         {
             int arr_size = cJSON_GetArraySize(rules);
             tmp.numofrules = arr_size;
-            MappingRule_t *map = (MappingRule_t *)malloc(arr_size * sizeof(MappingRule_t));
+            MappingRule_t *map = malloc(arr_size * sizeof(MappingRule_t));
             cJSON *rule_item;
             for (i = 0; i < arr_size; i++)
             {
