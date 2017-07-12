@@ -35,3 +35,6 @@ Client code need send json string in the following format
             ]
         }
     }
+
+## Check memory leaks
+    valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all <executable file>
