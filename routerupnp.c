@@ -84,19 +84,13 @@ static RequestMsg_t parse_request(const char *content)
     return tmp;
 }
 
-static void update_rule()
+static void timer_handler(int signum)
 {
-    // read config file and update port mapping
+    LOG(LOG_DBG, "Timer expired by signal: %s", strsignal(signum));
     LOG(LOG_INFO, "Read config from config file and update port mapping");
     PortMappingCfg_t pm_cfg = PMCFG_getConfig();
     upnpPFInterface_updatePortMapping(pm_cfg.rules, pm_cfg.numofrules);
     free(pm_cfg.rules);
-}
-
-static void timer_handler(int signum)
-{
-    LOG(LOG_DBG, "Timer expired by signal: %s", strsignal(signum));
-    update_rule();
     alarm(SCHEDULE_PERIOD); // new schedule
 }
 
@@ -111,13 +105,23 @@ static void timer_handler(int signum)
  */
 int main(int argc, char const *argv[])
 {
+    // check config file
+    PortMappingCfg_t pm_cfg = PMCFG_getConfig();
+    if (pm_cfg.is_enable)
+    {
+        upnpPFInterface_updatePortMapping(pm_cfg.rules, pm_cfg.numofrules);
+    }
+    else
+    {
+        free(pm_cfg.rules);
+        exit(0);
+    }
+
     while (SUCCESS != upnpPFInterface_init())
     {
         LOG(LOG_WARN, "upnpPFInterface_init() failed. Try again...");
         sleep(5);
     }
-
-    update_rule();
 
     mqInterface_create();
     char *msg_ptr = NULL;
@@ -134,7 +138,7 @@ int main(int argc, char const *argv[])
         {
             LOG(LOG_INFO, "Receive message %s", msg_ptr);
             RequestMsg_t request = parse_request(msg_ptr);
-            PortMappingCfg_t pm_cfg = request.data;
+            pm_cfg = request.data;
 
             free(msg_ptr);
             if (pm_cfg.is_enable)
