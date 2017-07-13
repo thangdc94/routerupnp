@@ -107,12 +107,9 @@ int main(int argc, char const *argv[])
 {
     // check config file
     PortMappingCfg_t pm_cfg = PMCFG_getConfig();
-    if (pm_cfg.is_enable)
+    if (!pm_cfg.is_enable)
     {
-        upnpPFInterface_updatePortMapping(pm_cfg.rules, pm_cfg.numofrules);
-    }
-    else
-    {
+        LOG(LOG_INFO, "Port mapping is disabled. Stop process!");
         free(pm_cfg.rules);
         exit(0);
     }
@@ -122,6 +119,9 @@ int main(int argc, char const *argv[])
         LOG(LOG_WARN, "upnpPFInterface_init() failed. Try again...");
         sleep(5);
     }
+
+    upnpPFInterface_updatePortMapping(pm_cfg.rules, pm_cfg.numofrules);
+    free(pm_cfg.rules);
 
     mqInterface_create();
     char *msg_ptr = NULL;

@@ -40,8 +40,8 @@
 
 static struct UPNPUrls g_urls;
 static struct IGDdatas g_data;
-static char g_lanaddr[64] = "unset"; /* my ip address on the LAN */
-static char g_desc[13] = "description";
+static char g_lanaddr[64]; /* my ip address on the LAN */
+static char g_desc[13];
 
 /* Function Prototypes */
 
@@ -63,53 +63,62 @@ int upnpPFInterface_init()
     {
         struct UPNPDev *device;
 
-        if (devlist)
+        LOG(LOG_INFO, "List of UPNP devices found on the network :");
+        for (device = devlist; device; device = device->pNext)
         {
-            LOG(LOG_INFO, "List of UPNP devices found on the network :");
-            for (device = devlist; device; device = device->pNext)
+            printf("\n");
+            LOG(LOG_INFO, "[desc]: %s | [st]: %s", device->descURL, device->st);
+            if (UPNP_GetIGDFromUrl(device->descURL, &g_urls, &g_data, g_lanaddr, sizeof(g_lanaddr)) || (i = UPNP_GetValidIGD(devlist, &g_urls, &g_data, g_lanaddr, sizeof(g_lanaddr))))
             {
-                LOG(LOG_INFO, "[desc]: %s | [st]: %s\n", device->descURL, device->st);
-            }
-        }
-        else
-        {
-            LOG(LOG_ERR, "upnpDiscover() error code=%d", error);
-        }
+                switch (i)
+                {
+                case 1:
+                    LOG(LOG_DBG, "Found valid IGD : %s", g_urls.controlURL);
+                    break;
+                case 2:
+                    LOG(LOG_DBG, "Found a (not connected?) IGD : %s", g_urls.controlURL);
+                    LOG(LOG_DBG, "Trying to continue anyway");
+                    break;
+                case 3:
+                    LOG(LOG_DBG, "UPnP device found. Is it an IGD ? : %s", g_urls.controlURL);
+                    LOG(LOG_DBG, "Trying to continue anyway");
+                    break;
+                default:
+                    LOG(LOG_DBG, "Found device (igd ?) : %s", g_urls.controlURL);
+                    LOG(LOG_DBG, "Trying to continue anyway");
+                }
 
-        if (UPNP_GetIGDFromUrl(0, &g_urls, &g_data, g_lanaddr, sizeof(g_lanaddr)) || (i = UPNP_GetValidIGD(devlist, &g_urls, &g_data, g_lanaddr, sizeof(g_lanaddr))))
-        {
-            switch (i)
-            {
-            case 1:
-                LOG(LOG_DBG, "Found valid IGD : %s", g_urls.controlURL);
-                break;
-            case 2:
-                LOG(LOG_DBG, "Found a (not connected?) IGD : %s", g_urls.controlURL);
-                LOG(LOG_DBG, "Trying to continue anyway");
-                break;
-            case 3:
-                LOG(LOG_DBG, "UPnP device found. Is it an IGD ? : %s", g_urls.controlURL);
-                LOG(LOG_DBG, "Trying to continue anyway");
-                break;
-            default:
-                LOG(LOG_DBG, "Found device (igd ?) : %s", g_urls.controlURL);
-                LOG(LOG_DBG, "Trying to continue anyway");
+                if ((strcmp(g_lanaddr, "") == 0) || (strcmp(g_data.first.servicetype, "") == 0))
+                {
+                    LOG(LOG_WARN, "Not a valid UPnP Internet Gateway Device");
+                    continue;
+                }
+                else
+                {
+                    LOG(LOG_DBG, "Local LAN ip address : %s", g_lanaddr);
+                    
+                    // use MAC Address as Description
+                    desc = getmac_from_ip(g_lanaddr);
+                    strcpy(g_desc, desc);
+                    free(desc);
+                    break;
+                }
             }
-            LOG(LOG_DBG, "Local LAN ip address : %s", g_lanaddr);
-            // use MAC Address as Description
-            desc = getmac_from_ip(g_lanaddr);
-            strcpy(g_desc, desc);
-            free(desc);
-        }
-        else
-        {
-            LOG(LOG_ERR, "No valid UPnP Internet Gateway Device found");
-            return -1;
+            else
+            {
+                LOG(LOG_WARN, "Not a valid UPnP Internet Gateway Device");
+                continue;
+            }
         }
 
         // free device list
         freeUPNPDevlist(devlist);
         devlist = 0;
+        if ((strcmp(g_lanaddr, "") == 0) || (strcmp(g_data.first.servicetype, "") == 0))
+        {
+            LOG(LOG_ERR, "No valid UPnP Internet Gateway Device found");
+            return -1;
+        }
     }
     else
     {
