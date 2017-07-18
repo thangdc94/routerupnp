@@ -11,6 +11,7 @@
 #define __LOG_UTIL_H
 
 #include <stdio.h>
+#include <pthread.h>
 
 #ifdef DISABLE_LOG
 /** function to remove log */
@@ -53,25 +54,25 @@ static const char *log_level_strings[] = {
 };
 
 /** function to print log */
-#define LOG(level, ...)                                                                    \
-    do                                                                                     \
-    {                                                                                      \
-        if (level <= LOG_LEVEL)                                                            \
-        {                                                                                  \
-            FILE *log_fp;                                                                  \
-            if (level == LOG_ERR || level == LOG_FATAL)                                    \
-            {                                                                              \
-                log_fp = stderr;                                                           \
-            }                                                                              \
-            else                                                                           \
-            {                                                                              \
-                log_fp = stdout;                                                           \
-            }                                                                              \
-            fprintf(log_fp, "[%s]\t%s:%d:", log_level_strings[level], __FILE__, __LINE__); \
-            fprintf(log_fp, __VA_ARGS__);                                                  \
-            fprintf(log_fp, "\n");                                                         \
-            fflush(log_fp);                                                                \
-        }                                                                                  \
+#define LOG(level, ...)                                                                                       \
+    do                                                                                                        \
+    {                                                                                                         \
+        if (level <= LOG_LEVEL)                                                                               \
+        {                                                                                                     \
+            FILE *log_fp;                                                                                     \
+            if (level == LOG_ERR || level == LOG_FATAL)                                                       \
+            {                                                                                                 \
+                log_fp = stderr;                                                                              \
+            }                                                                                                 \
+            else                                                                                              \
+            {                                                                                                 \
+                log_fp = stdout;                                                                              \
+            }                                                                                                 \
+            fprintf(log_fp, "%-5s|%lx| %s:%d:", log_level_strings[level], pthread_self(), __FILE__, __LINE__); \
+            fprintf(log_fp, __VA_ARGS__);                                                                     \
+            fprintf(log_fp, "\n");                                                                            \
+            fflush(log_fp);                                                                                   \
+        }                                                                                                     \
     } while (0)
 
 #endif //DISABLE_LOG
