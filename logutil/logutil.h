@@ -2,7 +2,10 @@
  * @file logutil.h
  * @brief A Log util
  * @details Print log with multiple level.
- * Need to define LOG_LEVEL
+ * @warning Define DISABLE_LOG in compile flags to disable all log
+ * @code
+ * -DDISABLE_LOG
+ * @endcode
  * 
  * @author Pham Ngoc Thang (thangdc94)
  * @bug No known bug
@@ -36,7 +39,14 @@
 /** 
  * @brief Default log level using for debug 
  * @details User should define log level they want in files that 
- * they want to change log level
+ * they want to change log level. To change log level in each file, redefine
+ * #LOG_LEVEL as the following before using #LOG:
+ * @code{.c}
+ * #ifdef LOG_LEVEL
+ * #undef LOG_LEVEL
+ * #define LOG_LEVEL LOG_INFO
+ * #endif //LOG_LEVEL
+ * @endcode
  */
 #ifndef LOG_LEVEL
 #define LOG_LEVEL LOG_DBG
