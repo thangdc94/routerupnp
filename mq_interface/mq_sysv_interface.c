@@ -106,6 +106,7 @@ int mqInterface_send(const char *message, int pid)
 
 int mqInterface_receive(char **msg_ptr)
 {
+    int ret = 0;
     // Declare message structure for received message.
     struct
     {
@@ -115,9 +116,12 @@ int mqInterface_receive(char **msg_ptr)
     /*
      * Receive an answer of message type 1.
      */
-    if (msgrcv(g_msqid, &rbuf, MSG_BUFFER_SIZE, MESSAGE_TYPE, 0) < 0)
+    if ((ret = msgrcv(g_msqid, &rbuf, MSG_BUFFER_SIZE, MESSAGE_TYPE, IPC_NOWAIT)) < 0)
     {
-        LOG(LOG_ERR, "Server: msgrcv failed");
+        if (errno != ENOMSG)
+        {
+            LOG(LOG_ERR, "Server: msgrcv failed: %s", strerror(errno));
+        }
         return -1;
     }
     LOG(LOG_DBG, "mqInterface_receive success");

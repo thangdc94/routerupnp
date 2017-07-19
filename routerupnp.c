@@ -11,7 +11,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h> /* to handle signal */
+#include <pthread.h>
 #include <cjson/cJSON.h>
+#include <errno.h> /* for error number */
 
 #include "mq_interface.h"
 #include "upnp_pf_interface.h"
@@ -33,6 +35,13 @@ typedef struct _RequestMsg_t
     PortMappingCfg_t data; /**< data content of the message */
 } RequestMsg_t;
 
+/**
+ * @brief Parse message request from client
+ * @details Parse message request from client to structure ::RequestMsg_t
+ * 
+ * @param content message from client
+ * @return Request Message data structure
+ */
 static RequestMsg_t parse_request(const char *content)
 {
     RequestMsg_t tmp;
@@ -84,6 +93,13 @@ static RequestMsg_t parse_request(const char *content)
     return tmp;
 }
 
+/**
+ * @brief Timer handler function
+ * @details Implement schedule timer using alarm signal
+ * 
+ * @param signum signal number
+ */
+
 static void timer_handler(int signum)
 {
     LOG(LOG_DBG, "Timer expired by signal: %s", strsignal(signum));
@@ -92,6 +108,62 @@ static void timer_handler(int signum)
     upnpPFInterface_updatePortMapping(pm_cfg.rules, pm_cfg.numofrules);
     free(pm_cfg.rules);
     alarm(SCHEDULE_PERIOD); // new schedule
+}
+
+/* Returns 1 (true) if the mutex is unlocked, which is the
+ * thread's signal to terminate. 
+ */
+
+/**
+ * @brief Check if we need to quit loop in ::thread_function()
+ * @details Check if we need to quit loop in ::thread_function()
+ * using mutex.
+ * 
+ * @param mtx mutex variable
+ * @return 1 (true) if the mutex is unlocked, which is the
+ * thread's signal to terminate and we need to quit the loop, 
+ * and 0 if mutex was locked
+ */
+static int need_quit(pthread_mutex_t *mtx)
+{
+    switch (pthread_mutex_trylock(mtx))
+    {
+    case 0: /* if we got the lock, unlock and return 1 (true) */
+        pthread_mutex_unlock(mtx);
+        return 1;
+    case EBUSY: /* return 0 (false) if the mutex was locked */
+        return 0;
+    }
+    return 1;
+}
+
+
+/**
+ * @brief Thread function
+ * @details Thread function, containing a loop that's infinite except that 
+ * it checks for termination with ::need_quit()
+ * @param arg argument passed to thread
+ * @return void*
+ */
+static void *thread_function(void *arg)
+{
+    char *msg_ptr = NULL;
+    pthread_mutex_t *mx = arg;
+    while (!need_quit(mx))
+    {
+        if (mqInterface_receive(&msg_ptr) == 0)
+        {
+            LOG(LOG_INFO, "Receive message %s", msg_ptr);
+            RequestMsg_t request = parse_request(msg_ptr);
+            PortMappingCfg_t pm_cfg = request.data;
+
+            free(msg_ptr);
+            mqInterface_send("Discovering", request.pid);
+            free(pm_cfg.rules);
+        }
+    }
+    LOG(LOG_DBG, "Thread stopped!");
+    return NULL;
 }
 
 /**
@@ -105,6 +177,18 @@ static void timer_handler(int signum)
  */
 int main(int argc, char const *argv[])
 {
+    pthread_t th;
+    pthread_mutex_t mxq; /* mutex used as quit flag */
+
+    mqInterface_create();
+
+    /* init and lock the mutex before creating the thread.  As long as the
+     mutex stays locked, the thread should keep running.  A pointer to the
+     mutex is passed as the argument to the thread function. */
+    pthread_mutex_init(&mxq, NULL);
+    pthread_mutex_lock(&mxq);
+    pthread_create(&th, NULL, thread_function, &mxq);
+
     // check config file
     PortMappingCfg_t pm_cfg = PMCFG_getConfig();
     if (!pm_cfg.is_enable)
@@ -120,10 +204,14 @@ int main(int argc, char const *argv[])
         sleep(5);
     }
 
+    /* unlock mxq to tell the thread to terminate, then join the thread */
+    pthread_mutex_unlock(&mxq);
+    pthread_mutex_destroy(&mxq);
+    pthread_join(th, NULL);
+
     upnpPFInterface_updatePortMapping(pm_cfg.rules, pm_cfg.numofrules);
     free(pm_cfg.rules);
 
-    mqInterface_create();
     char *msg_ptr = NULL;
 
     /*
